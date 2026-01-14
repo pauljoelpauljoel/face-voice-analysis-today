@@ -56,7 +56,28 @@ const generateModelInsightsFlow = ai.defineFlow(
     outputSchema: GenerateModelInsightsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    const maxRetries = 5;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const {output} = await prompt(input);
+        return output!;
+      } catch (error) {
+        lastError = error as Error;
+        const isRetryable = lastError.message.includes('503') || lastError.message.includes('Service Unavailable') || lastError.message.includes('overloaded');
+
+        if (!isRetryable || attempt === maxRetries - 1) {
+          throw lastError;
+        }
+
+        // Exponential backoff: wait 3^attempt seconds (3, 9, 27, 81 seconds)
+        const delay = Math.pow(3, attempt) * 1000;
+        console.log(`Gemini API error (attempt ${attempt + 1}/${maxRetries}): ${lastError.message}. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    throw lastError;
   }
 );

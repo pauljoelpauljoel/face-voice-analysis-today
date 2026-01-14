@@ -5,8 +5,11 @@ import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'Vocalis Vita | AI Health Analysis',
+  title: 'Disease Prediction Using Face And Voice Analysis',
   description: 'Early disease detection through advanced facial and voice analysis.',
+  icons: {
+    icon: '/logo.jpg',
+  },
 };
 
 export default function RootLayout({

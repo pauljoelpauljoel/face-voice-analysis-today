@@ -10,14 +10,24 @@ const analysisSchema = z.object({
   diseaseContext: z.string(),
 });
 
+export type PerformanceMetric = {
+  metric: string;
+  value: number;
+};
 export type AnalysisState = {
   prediction?: string;
   insights?: string;
   fusionReasoning?: string;
+  performanceMetrics?: PerformanceMetric[];
   error?: string;
   success?: boolean;
 };
 
+// Helper to generate a random number within a range
+const randomInRange = (min: number, max: number, decimals: number = 1) => {
+  const str = (Math.random() * (max - min) + min).toFixed(decimals);
+  return parseFloat(str);
+};
 export async function analyzeHealth(
   prevState: AnalysisState,
   formData: FormData
@@ -27,6 +37,8 @@ export async function analyzeHealth(
       faceDataUri: formData.get('faceDataUri'),
       voiceDataUri: formData.get('voiceDataUri'),
       diseaseContext: formData.get('diseaseContext'),
+      
+
     });
 
     if (!validatedFields.success) {
@@ -35,7 +47,13 @@ export async function analyzeHealth(
       };
     }
 
-    const { faceDataUri, voiceDataUri, diseaseContext } = validatedFields.data;
+    const { faceDataUri, voiceDataUri } = validatedFields.data;
+      let { diseaseContext } = validatedFields.data;
+
+    if (diseaseContext === 'None') {
+      diseaseContext = 'General Checkup';
+    }
+
 
     // 1. Simulate a prediction
     const prediction = Math.random() > 0.4 ? diseaseContext : 'Healthy';
@@ -63,18 +81,33 @@ export async function analyzeHealth(
     if (!fusionResult?.reasoning || !insightsResult?.insights) {
       throw new Error('AI analysis failed to generate complete results.');
     }
-
+    // 4. Simulate new performance metrics
+    const performanceMetrics = [
+      { metric: "Accuracy", value: randomInRange(92, 98) },
+      { metric: "Precision", value: randomInRange(90, 95) },
+      { metric: "Recall", value: randomInRange(93, 99) },
+      { metric: "F1-Score", value: randomInRange(91, 96) },
+    ];
+    console.log('Simulated new metrics:', performanceMetrics);
     return {
       prediction: prediction,
       fusionReasoning: fusionResult.reasoning,
       insights: insightsResult.insights,
+      performanceMetrics: performanceMetrics,
       success: true,
     };
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
     console.error(errorMessage);
+
+    // Check if it's a retryable API error
+    const isApiError = errorMessage.includes('503') || errorMessage.includes('Service Unavailable') || errorMessage.includes('overloaded');
+    const userMessage = isApiError
+      ? 'The AI service is currently overloaded. Please wait a moment and try again.'
+      : 'Analysis failed. Please try again.';
+
     return {
-      error: `Analysis failed. Please try again.`,
+      error: userMessage,
     };
   }
 }
